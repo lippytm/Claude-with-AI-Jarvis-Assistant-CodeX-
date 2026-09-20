@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import socket
 import sys
 import urllib.error
 import urllib.request
@@ -106,13 +107,16 @@ def main() -> int:
         return 1
     except urllib.error.URLError as error:
         print("Claude connection failed.", file=sys.stderr)
-        print(
-            "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings.",
-            file=sys.stderr,
-        )
+        if isinstance(error.reason, socket.timeout):
+            print("The request timed out before the Anthropic API responded.", file=sys.stderr)
+        else:
+            print(
+                "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings.",
+                file=sys.stderr,
+            )
         print(f"Details: {error.reason}", file=sys.stderr)
         return 1
-    except TimeoutError:
+    except socket.timeout:
         print("Claude connection failed.", file=sys.stderr)
         print("The request timed out before the Anthropic API responded.", file=sys.stderr)
         return 1

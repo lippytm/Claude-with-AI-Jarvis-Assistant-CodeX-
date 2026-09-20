@@ -9,7 +9,9 @@ Starter repository for connecting a local environment to the Anthropic Claude AP
    - `cp .env.example .env`
    - Set `ANTHROPIC_API_KEY` in `.env`
 3. Export the variables into your shell:
-   - `set -a && source .env && set +a`
+   - Bash or Zsh: `set -a && source .env && set +a`
+   - PowerShell: `Get-Content .env | ForEach-Object { if ($_ -match '^(.*?)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }`
+   - Command Prompt: set each variable manually with `set ANTHROPIC_API_KEY=...`
 4. Run the connectivity check:
    - `python3 scripts/check_claude_connection.py`
 
