@@ -5,14 +5,20 @@ Starter repository for connecting a local environment to the Anthropic Claude AP
 ## Quick start
 
 1. Make sure Python 3 is installed.
-2. Copy the example environment file and add your real key:
-   - `cp .env.example .env`
-   - Set `ANTHROPIC_API_KEY` in `.env`
-3. Export the variables into your shell:
-   - Bash or Zsh: `set -a && source .env && set +a`
-   - PowerShell: `Get-Content .env | ForEach-Object { if ($_ -match '^(.*?)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }`
-   - Command Prompt: set each variable manually with `set ANTHROPIC_API_KEY=...`
-4. Run the connectivity check:
+2. Choose one setup path:
+   - **Bash or Zsh**
+     - `cp .env.example .env`
+     - Set `ANTHROPIC_API_KEY` in `.env`
+     - `set -a && source .env && set +a`
+   - **PowerShell**
+     - `$env:ANTHROPIC_API_KEY="your_anthropic_api_key_here"`
+     - `$env:ANTHROPIC_MODEL="claude-3-5-haiku-latest"`
+     - `$env:ANTHROPIC_BASE_URL="https://api.anthropic.com"`
+   - **Command Prompt**
+     - `set ANTHROPIC_API_KEY=your_anthropic_api_key_here`
+     - `set ANTHROPIC_MODEL=claude-3-5-haiku-latest`
+     - `set ANTHROPIC_BASE_URL=https://api.anthropic.com`
+3. Run the connectivity check:
    - `python3 scripts/check_claude_connection.py`
 
 If the connection works, the script prints the endpoint, model, and a short Claude response.

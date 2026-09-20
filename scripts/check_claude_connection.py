@@ -91,6 +91,17 @@ def safe_error_details(body: str) -> str | None:
 
 def response_error_details(body: bytes) -> str | None:
     decoded = body.decode("utf-8")
+    try:
+        data = json.loads(decoded)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    if "error" not in data or "content" in data:
+        return None
+
     return safe_error_details(decoded)
 
 
