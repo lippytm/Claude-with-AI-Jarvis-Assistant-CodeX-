@@ -76,7 +76,7 @@ class MainTests(unittest.TestCase):
         stderr = StringIO()
 
         with (
-            mock.patch("scripts.check_claude_connection.os.environ", {}, clear=True),
+            mock.patch.dict("scripts.check_claude_connection.os.environ", {}, clear=True),
             mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
             mock.patch("sys.stdout", stdout),
             mock.patch("sys.stderr", stderr),
