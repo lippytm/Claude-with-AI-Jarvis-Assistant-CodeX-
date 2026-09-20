@@ -10,5 +10,9 @@
 *.log.*
 *.sig
 
+.env
+.env.*
+!.env.example
+
 pkg/
 src/
