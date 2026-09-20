@@ -9,6 +9,8 @@
 *.log
 *.log.*
 *.sig
+*.pyc
+__pycache__/
 
 .env
 .env.*
