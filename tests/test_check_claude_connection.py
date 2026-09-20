@@ -1,7 +1,10 @@
 import socket
 import unittest
+from io import StringIO
+from unittest import mock
 
 from scripts.check_claude_connection import (
+    main,
     network_error_message,
     parse_response,
     safe_error_details,
@@ -63,6 +66,34 @@ class ErrorDetailTests(unittest.TestCase):
         self.assertEqual(
             network_error_message("dns failure"),
             "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings.",
+        )
+
+
+class MainTests(unittest.TestCase):
+    def test_main_reports_invalid_json_response(self) -> None:
+        response = mock.MagicMock()
+        response.read.return_value = b"not json"
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with (
+            mock.patch("scripts.check_claude_connection.urllib.request.urlopen", return_value=response),
+            mock.patch("scripts.check_claude_connection.os.environ", {"ANTHROPIC_API_KEY": "test-key"}),
+            mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
+            mock.patch("sys.stdout", stdout),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Claude connection failed.", stderr.getvalue())
+        self.assertIn(
+            "Anthropic returned a response that could not be parsed as JSON.",
+            stderr.getvalue(),
         )
 
 

@@ -32,7 +32,7 @@ The included checker helps isolate the most common reasons Claude will not conne
 - **401**: the API key is invalid, missing, or revoked
 - **403**: the key does not have permission for the requested resource
 - **404**: the base URL or endpoint is incorrect
-- **429**: the account is rate limited or out of quota
+- **429**: the request is rate limited or the account has reached a usage limit
 - **Network error**: the machine cannot reach the Anthropic API
 
 ## Files
