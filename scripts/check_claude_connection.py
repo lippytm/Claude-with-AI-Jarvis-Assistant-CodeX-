@@ -53,9 +53,15 @@ def explain_http_error(error: urllib.error.HTTPError) -> str:
 def parse_response(body: bytes) -> str:
     data = json.loads(body.decode("utf-8"))
     content = data.get("content", [])
+    if not isinstance(content, list):
+        return "Connected successfully, but the response body did not include message content."
     if not content:
         return "Connected successfully, but the response body did not include message content."
-    text_blocks = [block.get("text", "") for block in content if block.get("type") == "text"]
+    text_blocks = [
+        block.get("text", "")
+        for block in content
+        if isinstance(block, dict) and block.get("type") == "text"
+    ]
     joined = " ".join(part.strip() for part in text_blocks if part.strip())
     return joined or "Connected successfully, but the response did not include text output."
 
@@ -71,10 +77,22 @@ def safe_error_details(body: str) -> str | None:
         return None
 
     error_type = error.get("type")
-    if isinstance(error_type, str) and error_type.strip():
-        return f"Error type: {error_type.strip()}"
+    error_message = error.get("message")
+    parts = []
 
-    return None
+    if isinstance(error_message, str) and error_message.strip():
+        parts.append(f"Message: {error_message.strip()}")
+
+    if isinstance(error_type, str) and error_type.strip():
+        parts.append(f"Error type: {error_type.strip()}")
+
+    return " | ".join(parts) or None
+
+
+def network_error_message(reason: object) -> str:
+    if isinstance(reason, socket.timeout):
+        return "The request timed out before the Anthropic API responded."
+    return "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings."
 
 
 def main() -> int:
@@ -125,13 +143,7 @@ def main() -> int:
         return 1
     except urllib.error.URLError as error:
         print("Claude connection failed.", file=sys.stderr)
-        if isinstance(error.reason, socket.timeout):
-            print("The request timed out before the Anthropic API responded.", file=sys.stderr)
-        else:
-            print(
-                "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings.",
-                file=sys.stderr,
-            )
+        print(network_error_message(error.reason), file=sys.stderr)
         print(f"Details: {error.reason}", file=sys.stderr)
         return 1
     except socket.timeout:
