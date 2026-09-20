@@ -60,6 +60,23 @@ def parse_response(body: bytes) -> str:
     return joined or "Connected successfully, but the response did not include text output."
 
 
+def safe_error_details(body: str) -> str | None:
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return None
+
+    error = data.get("error")
+    if not isinstance(error, dict):
+        return None
+
+    error_type = error.get("type")
+    if isinstance(error_type, str) and error_type.strip():
+        return f"Error type: {error_type.strip()}"
+
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check whether this environment can connect to the Anthropic Claude API."
@@ -102,8 +119,9 @@ def main() -> int:
         error_body = error.read().decode("utf-8", errors="replace").strip()
         print("Claude connection failed.", file=sys.stderr)
         print(f"HTTP {error.code}: {explain_http_error(error)}", file=sys.stderr)
-        if error_body:
-            print(f"Details: {error_body}", file=sys.stderr)
+        details = safe_error_details(error_body) if error_body else None
+        if details:
+            print(details, file=sys.stderr)
         return 1
     except urllib.error.URLError as error:
         print("Claude connection failed.", file=sys.stderr)
