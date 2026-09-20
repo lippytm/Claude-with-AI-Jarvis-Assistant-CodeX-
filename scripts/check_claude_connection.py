@@ -99,7 +99,11 @@ def response_error_details(body: bytes) -> str | None:
     if not isinstance(data, dict):
         return None
 
-    if "error" not in data or "content" in data:
+    if "error" not in data:
+        return None
+
+    content = data.get("content")
+    if isinstance(content, list) and content:
         return None
 
     return safe_error_details(decoded)
@@ -109,6 +113,13 @@ def network_error_message(reason: object) -> str:
     if isinstance(reason, socket.timeout):
         return "The request timed out before the Anthropic API responded."
     return "Network error: unable to reach the Anthropic API. Check DNS, firewall, proxy, or base URL settings."
+
+
+def report_network_failure(reason: object) -> int:
+    print("Claude connection failed.", file=sys.stderr)
+    print(network_error_message(reason), file=sys.stderr)
+    print(f"Details: {reason}", file=sys.stderr)
+    return 1
 
 
 def main() -> int:
@@ -163,15 +174,10 @@ def main() -> int:
         if details:
             print(details, file=sys.stderr)
         return 1
+    except socket.timeout as error:
+        return report_network_failure(error)
     except urllib.error.URLError as error:
-        print("Claude connection failed.", file=sys.stderr)
-        print(network_error_message(error.reason), file=sys.stderr)
-        print(f"Details: {error.reason}", file=sys.stderr)
-        return 1
-    except socket.timeout:
-        print("Claude connection failed.", file=sys.stderr)
-        print("The request timed out before the Anthropic API responded.", file=sys.stderr)
-        return 1
+        return report_network_failure(error.reason)
     except json.JSONDecodeError:
         print("Claude connection failed.", file=sys.stderr)
         print("Anthropic returned a response that could not be parsed as JSON.", file=sys.stderr)

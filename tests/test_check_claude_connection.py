@@ -73,6 +73,14 @@ class ErrorDetailTests(unittest.TestCase):
 
         self.assertIsNone(response_error_details(body))
 
+    def test_response_error_details_keeps_error_when_content_is_empty(self) -> None:
+        body = b'{"content":[],"error":{"type":"authentication_error","message":"invalid x-api-key"}}'
+
+        self.assertEqual(
+            response_error_details(body),
+            "Message: invalid x-api-key | Error type: authentication_error",
+        )
+
     def test_network_error_message_for_timeout(self) -> None:
         self.assertEqual(
             network_error_message(socket.timeout("timed out")),
