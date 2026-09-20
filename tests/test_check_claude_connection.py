@@ -1,6 +1,7 @@
 import socket
 import unittest
-from io import StringIO
+import urllib.error
+from io import BytesIO, StringIO
 from unittest import mock
 
 from scripts.check_claude_connection import (
@@ -70,6 +71,70 @@ class ErrorDetailTests(unittest.TestCase):
 
 
 class MainTests(unittest.TestCase):
+    def test_main_requires_api_key(self) -> None:
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with (
+            mock.patch("scripts.check_claude_connection.os.environ", {}, clear=True),
+            mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
+            mock.patch("sys.stdout", stdout),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ANTHROPIC_API_KEY is not set.", stderr.getvalue())
+
+    def test_main_reports_http_error_details(self) -> None:
+        error = urllib.error.HTTPError(
+            url="https://api.anthropic.com/v1/messages",
+            code=401,
+            msg="Unauthorized",
+            hdrs=None,
+            fp=BytesIO(
+                b'{"error":{"type":"authentication_error","message":"invalid x-api-key"}}'
+            ),
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with (
+            mock.patch("scripts.check_claude_connection.urllib.request.urlopen", side_effect=error),
+            mock.patch("scripts.check_claude_connection.os.environ", {"ANTHROPIC_API_KEY": "test-key"}),
+            mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
+            mock.patch("sys.stdout", stdout),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("HTTP 401: The API key is missing, invalid, or revoked.", stderr.getvalue())
+        self.assertIn("Message: invalid x-api-key | Error type: authentication_error", stderr.getvalue())
+
+    def test_main_reports_url_error(self) -> None:
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with (
+            mock.patch(
+                "scripts.check_claude_connection.urllib.request.urlopen",
+                side_effect=urllib.error.URLError("dns failure"),
+            ),
+            mock.patch("scripts.check_claude_connection.os.environ", {"ANTHROPIC_API_KEY": "test-key"}),
+            mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
+            mock.patch("sys.stdout", stdout),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Network error: unable to reach the Anthropic API.", stderr.getvalue())
+        self.assertIn("Details: dns failure", stderr.getvalue())
+
     def test_main_reports_invalid_json_response(self) -> None:
         response = mock.MagicMock()
         response.read.return_value = b"not json"
