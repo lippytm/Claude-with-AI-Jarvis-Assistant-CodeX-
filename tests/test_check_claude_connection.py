@@ -8,6 +8,7 @@ from scripts.check_claude_connection import (
     main,
     network_error_message,
     parse_response,
+    response_error_details,
     safe_error_details,
 )
 
@@ -56,6 +57,14 @@ class ErrorDetailTests(unittest.TestCase):
 
     def test_safe_error_details_returns_none_for_unstructured_payload(self) -> None:
         self.assertIsNone(safe_error_details('{"unexpected":true}'))
+
+    def test_response_error_details_reads_error_payload(self) -> None:
+        body = b'{"error":{"type":"authentication_error","message":"invalid x-api-key"}}'
+
+        self.assertEqual(
+            response_error_details(body),
+            "Message: invalid x-api-key | Error type: authentication_error",
+        )
 
     def test_network_error_message_for_timeout(self) -> None:
         self.assertEqual(
@@ -158,6 +167,34 @@ class MainTests(unittest.TestCase):
         self.assertIn("Claude connection failed.", stderr.getvalue())
         self.assertIn(
             "Anthropic returned a response that could not be parsed as JSON.",
+            stderr.getvalue(),
+        )
+
+    def test_main_rejects_success_response_with_error_payload(self) -> None:
+        response = mock.MagicMock()
+        response.read.return_value = (
+            b'{"error":{"type":"authentication_error","message":"invalid x-api-key"}}'
+        )
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+
+        stdout = StringIO()
+        stderr = StringIO()
+
+        with (
+            mock.patch("scripts.check_claude_connection.urllib.request.urlopen", return_value=response),
+            mock.patch("scripts.check_claude_connection.os.environ", {"ANTHROPIC_API_KEY": "test-key"}),
+            mock.patch("scripts.check_claude_connection.sys.argv", ["check_claude_connection.py"]),
+            mock.patch("sys.stdout", stdout),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Claude connection failed.", stderr.getvalue())
+        self.assertIn(
+            "API response reported an error. Message: invalid x-api-key | Error type: authentication_error",
             stderr.getvalue(),
         )
 

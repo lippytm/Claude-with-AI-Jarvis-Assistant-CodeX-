@@ -89,6 +89,11 @@ def safe_error_details(body: str) -> str | None:
     return " | ".join(parts) or None
 
 
+def response_error_details(body: bytes) -> str | None:
+    decoded = body.decode("utf-8")
+    return safe_error_details(decoded)
+
+
 def network_error_message(reason: object) -> str:
     if isinstance(reason, socket.timeout):
         return "The request timed out before the Anthropic API responded."
@@ -127,7 +132,13 @@ def main() -> int:
 
     try:
         with urllib.request.urlopen(request, timeout=args.timeout) as response:
-            message = parse_response(response.read())
+            body = response.read()
+            error_details = response_error_details(body)
+            if error_details:
+                print("Claude connection failed.", file=sys.stderr)
+                print(f"API response reported an error. {error_details}", file=sys.stderr)
+                return 1
+            message = parse_response(body)
             print("Claude connection succeeded.")
             print(f"Model: {args.model}")
             print(f"Endpoint: {args.base_url.rstrip('/')}/v1/messages")
