@@ -9,6 +9,12 @@
 *.log
 *.log.*
 *.sig
+*.pyc
+__pycache__/
+
+.env
+.env.*
+!.env.example
 
 pkg/
 src/
